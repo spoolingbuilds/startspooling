@@ -1,0 +1,47 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model WaitlistSignup {
+  id                   String    @id @default(cuid())
+  email                String    @unique
+  verificationCode     String
+  verificationAttempts Int       @default(0)
+  lockedUntil          DateTime?
+  isVerified           Boolean   @default(false)
+  verifiedAt           DateTime?
+  welcomeMessageId     Int?
+  welcomeMessageText   String?
+  calculatedNumber     Int?
+  browserClient        String
+  ipAddress            String
+  spoolTag             String    @default("Spool_PL")
+  referralSource       String?
+  createdAt            DateTime  @default(now())
+  updatedAt            DateTime  @updatedAt
+
+  @@map("waitlist_signups")
+  @@index([lockedUntil])
+  @@index([email, isVerified]) // Composite index for verification queries
+  @@index([ipAddress, createdAt]) // Composite index for rate limiting
+}
+
+model VerificationAttempt {
+  id            String   @id @default(cuid())
+  email         String
+  attemptedCode String
+  wasSuccessful Boolean
+  ipAddress     String
+  timestamp     DateTime @default(now())
+
+  @@map("verification_attempts")
+  @@index([email])
+}

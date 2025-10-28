@@ -1,0 +1,42 @@
+# Development files
+.env.local
+.env.development
+.env.test
+
+# Documentation
+docs/
+*.md
+!README.md
+
+# Testing
+test/
+tests/
+*.test.ts
+*.test.tsx
+*.spec.ts
+*.spec.tsx
+
+# Development tools
+test-db.ts
+.vscode/
+.idea/
+
+# Database files (production uses external DB)
+prisma/dev.db
+prisma/dev.db-journal
+
+# Logs
+*.log
+npm-debug.log*
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Git
+.git/
+.gitignore
+
+# CI/CD
+.github/
+

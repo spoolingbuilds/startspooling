@@ -1,0 +1,345 @@
+import { Resend } from 'resend'
+import { verificationCodeTemplate } from './email-templates'
+
+/**
+ * Email service configuration
+ */
+const RESEND_API_KEY = process.env.RESEND_API_KEY
+const FROM_EMAIL = process.env.FROM_EMAIL || 'noreply@startspooling.com'
+const FROM_NAME = 'StartSpooling'
+
+// Log current email configuration for debugging
+console.log('[Email Config] FROM_EMAIL:', FROM_EMAIL)
+console.log('[Email Config] RESEND_API_KEY configured:', !!RESEND_API_KEY)
+
+// Validate API key configuration
+if (!RESEND_API_KEY || RESEND_API_KEY === 'your_resend_api_key_here' || RESEND_API_KEY === '') {
+  console.error('[Email] ⚠️  WARNING: RESEND_API_KEY is not configured!')
+  console.error('[Email] Please set RESEND_API_KEY in your .env.local file')
+  console.error('[Email] Get your API key from https://resend.com/api-keys')
+}
+
+const resend = new Resend(RESEND_API_KEY)
+
+/**
+ * Check if email service is properly configured
+ */
+export function isEmailConfigured(): boolean {
+  return !!RESEND_API_KEY && 
+         RESEND_API_KEY !== 'your_resend_api_key_here' && 
+         RESEND_API_KEY !== ''
+}
+
+/**
+ * Rate limiting configuration
+ */
+const MAX_SENDS_PER_EMAIL_PER_HOUR = 5
+const MAX_SENDS_PER_IP_PER_HOUR = 10
+const RATE_LIMIT_WINDOW_MS = 60 * 60 * 1000 // 1 hour
+
+/**
+ * Rate limiting storage
+ * In production, use Redis or database for distributed systems
+ */
+interface RateLimitEntry {
+  timestamps: number[]
+  count: number
+}
+
+const emailRateLimit = new Map<string, RateLimitEntry>()
+const ipRateLimit = new Map<string, RateLimitEntry>()
+
+/**
+ * Email send result
+ */
+export interface EmailSendResult {
+  success: boolean
+  error?: string
+  retries?: number
+}
+
+/**
+ * Clean up old entries from rate limiting maps
+ */
+function cleanupRateLimitMaps() {
+  const now = Date.now()
+  const cutoff = now - RATE_LIMIT_WINDOW_MS
+
+  // Clean email rate limit
+  const emailEntries = Array.from(emailRateLimit.entries())
+  for (const [key, entry] of emailEntries) {
+    entry.timestamps = entry.timestamps.filter(ts => ts > cutoff)
+    if (entry.timestamps.length === 0) {
+      emailRateLimit.delete(key)
+    } else {
+      entry.count = entry.timestamps.length
+    }
+  }
+
+  // Clean IP rate limit
+  const ipEntries = Array.from(ipRateLimit.entries())
+  for (const [key, entry] of ipEntries) {
+    entry.timestamps = entry.timestamps.filter(ts => ts > cutoff)
+    if (entry.timestamps.length === 0) {
+      ipRateLimit.delete(key)
+    } else {
+      entry.count = entry.timestamps.length
+    }
+  }
+}
+
+/**
+ * Check if email sending is rate limited
+ */
+function isEmailRateLimited(email: string): boolean {
+  cleanupRateLimitMaps()
+  
+  const entry = emailRateLimit.get(email)
+  if (!entry) return false
+  
+  return entry.count >= MAX_SENDS_PER_EMAIL_PER_HOUR
+}
+
+/**
+ * Check if IP is rate limited
+ */
+function isIpRateLimited(ip: string): boolean {
+  cleanupRateLimitMaps()
+  
+  const entry = ipRateLimit.get(ip)
+  if (!entry) return false
+  
+  return entry.count >= MAX_SENDS_PER_IP_PER_HOUR
+}
+
+/**
+ * Record email send attempt for rate limiting
+ */
+function recordEmailSend(email: string, ip: string) {
+  const now = Date.now()
+  
+  // Record for email
+  if (!emailRateLimit.has(email)) {
+    emailRateLimit.set(email, { timestamps: [], count: 0 })
+  }
+  const emailEntry = emailRateLimit.get(email)!
+  emailEntry.timestamps.push(now)
+  emailEntry.count = emailEntry.timestamps.length
+  
+  // Record for IP
+  if (!ipRateLimit.has(ip)) {
+    ipRateLimit.set(ip, { timestamps: [], count: 0 })
+  }
+  const ipEntry = ipRateLimit.get(ip)!
+  ipEntry.timestamps.push(now)
+  ipEntry.count = ipEntry.timestamps.length
+}
+
+/**
+ * Send email with retry logic
+ */
+async function sendEmailWithRetry(
+  to: string,
+  subject: string,
+  template: { text: string; html: string },
+  maxRetries: number = 2
+): Promise<EmailSendResult> {
+  // Check if email service is configured
+  if (!isEmailConfigured()) {
+    const errorMsg = 'Email service not configured. Please set RESEND_API_KEY in .env.local'
+    console.error(`[Email] ❌ ${errorMsg}`)
+    return {
+      success: false,
+      error: errorMsg
+    }
+  }
+
+  let lastError: Error | null = null
+  
+  for (let attempt = 0; attempt <= maxRetries; attempt++) {
+    try {
+      const result = await resend.emails.send({
+        from: `${FROM_NAME} <${FROM_EMAIL}>`,
+        to,
+        subject,
+        text: template.text,
+        html: template.html,
+      })
+      
+      console.log(`[Email] ✓ Successfully sent to ${to}`, result)
+      
+      return {
+        success: true,
+        retries: attempt
+      }
+    } catch (error) {
+      lastError = error instanceof Error ? error : new Error('Unknown error')
+      console.error(`[Email] ❌ Failed to send to ${to} (attempt ${attempt + 1}/${maxRetries + 1}):`, lastError)
+      
+      // Log detailed error information for debugging
+      if (error && typeof error === 'object') {
+        console.error('[Email] Error details:', {
+          name: (error as any).name,
+          message: (error as any).message,
+          statusCode: (error as any).statusCode,
+          from: FROM_EMAIL,
+          to: to
+        })
+      }
+      
+      // Don't retry on the last attempt
+      if (attempt < maxRetries) {
+        // Exponential backoff: wait 1s, 2s, 4s
+        const delay = Math.pow(2, attempt) * 1000
+        await new Promise(resolve => setTimeout(resolve, delay))
+      }
+    }
+  }
+  
+  return {
+    success: false,
+    error: lastError?.message || 'Failed to send email',
+    retries: maxRetries
+  }
+}
+
+/**
+ * Send verification code email
+ * @param email - Recipient email address
+ * @param code - 6-character verification code
+ * @param ipAddress - IP address for rate limiting (optional)
+ * @returns EmailSendResult
+ */
+export async function sendVerificationCode(
+  email: string,
+  code: string,
+  ipAddress?: string
+): Promise<EmailSendResult> {
+  try {
+    // Rate limiting check
+    if (isEmailRateLimited(email)) {
+      console.warn(`[Email] Rate limited for email: ${email}`)
+      return {
+        success: false,
+        error: 'Rate limit exceeded. Please try again later.'
+      }
+    }
+
+    if (ipAddress && isIpRateLimited(ipAddress)) {
+      console.warn(`[Email] Rate limited for IP: ${ipAddress}`)
+      return {
+        success: false,
+        error: 'Rate limit exceeded. Please try again later.'
+      }
+    }
+
+    // Create email template
+    const template = verificationCodeTemplate(code)
+    
+    // Send email with retry logic
+    const result = await sendEmailWithRetry(
+      email,
+      'your access code',
+      template
+    )
+
+    // Record send attempt for rate limiting
+    if (result.success && ipAddress) {
+      recordEmailSend(email, ipAddress)
+    }
+
+    return result
+  } catch (error) {
+    console.error('[Email] Error in sendVerificationCode:', error)
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Failed to send verification email'
+    }
+  }
+}
+
+/**
+ * Resend verification code email
+ * This is an alias for sendVerificationCode with specific logging
+ * @param email - Recipient email address
+ * @param code - 6-character verification code
+ * @param ipAddress - IP address for rate limiting (optional)
+ * @returns EmailSendResult
+ */
+export async function resendVerificationCode(
+  email: string,
+  code: string,
+  ipAddress?: string
+): Promise<EmailSendResult> {
+  return sendVerificationCode(email, code, ipAddress)
+}
+
+/**
+ * Get rate limit statistics for monitoring
+ */
+export function getRateLimitStats(): {
+  emailEntries: number
+  ipEntries: number
+  topEmails: Array<{ email: string; count: number }>
+  topIps: Array<{ ip: string; count: number }>
+} {
+  cleanupRateLimitMaps()
+  
+  const emailArray = Array.from(emailRateLimit.entries())
+    .map(([email, entry]) => ({ email, count: entry.count }))
+    .sort((a, b) => b.count - a.count)
+    .slice(0, 10)
+  
+  const ipArray = Array.from(ipRateLimit.entries())
+    .map(([ip, entry]) => ({ ip, count: entry.count }))
+    .sort((a, b) => b.count - a.count)
+    .slice(0, 10)
+  
+  return {
+    emailEntries: emailRateLimit.size,
+    ipEntries: ipRateLimit.size,
+    topEmails: emailArray,
+    topIps: ipArray
+  }
+}
+
+/**
+ * Clear rate limit for testing/debugging
+ */
+export function clearRateLimits(email?: string, ip?: string): void {
+  if (email) {
+    emailRateLimit.delete(email)
+  }
+  if (ip) {
+    ipRateLimit.delete(ip)
+  }
+  if (!email && !ip) {
+    emailRateLimit.clear()
+    ipRateLimit.clear()
+  }
+}
+
+/**
+ * Check if email is rate limited (for API responses)
+ */
+export function checkEmailRateLimit(email: string, ip?: string): {
+  allowed: boolean
+  emailLimited: boolean
+  ipLimited: boolean
+  emailCount?: number
+  ipCount?: number
+} {
+  cleanupRateLimitMaps()
+  
+  const emailLimited = isEmailRateLimited(email)
+  const ipLimited = ip ? isIpRateLimited(ip) : false
+  
+  return {
+    allowed: !emailLimited && !ipLimited,
+    emailLimited,
+    ipLimited,
+    emailCount: emailRateLimit.get(email)?.count,
+    ipCount: ip ? ipRateLimit.get(ip)?.count : undefined
+  }
+}
+
