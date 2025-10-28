@@ -206,11 +206,11 @@ export class SecurityRateLimiter {
     const now = Date.now()
     const maxAge = 24 * 60 * 60 * 1000 // 24 hours
     
-    for (const [key, value] of this.attempts.entries()) {
+    Array.from(this.attempts.entries()).forEach(([key, value]) => {
       if (now - value.lastAttempt > maxAge) {
         this.attempts.delete(key)
       }
-    }
+    })
   }
 }
 

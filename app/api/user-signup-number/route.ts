@@ -31,7 +31,7 @@ export async function GET(request: NextRequest) {
     const emailValidation = validateInput.email(sanitizedEmail)
     
     if (!emailValidation.isValid) {
-      securityLogger.logFailedAttempt('signup_number', { 
+      securityLogger.logFailedAttempt('signup', { 
         email: sanitizedEmail, 
         error: emailValidation.error,
         ipAddress 
