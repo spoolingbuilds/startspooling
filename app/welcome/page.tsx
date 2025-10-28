@@ -3,7 +3,6 @@
 import { useState, useEffect, useCallback, Suspense } from 'react'
 import { useSearchParams } from 'next/navigation'
 import { analytics, FUNNEL_STEPS } from '@/lib/analytics'
-import { sendConfirmationEmail } from '@/lib/email'
 import PageAnalytics from '@/components/PageAnalytics'
 
 function WelcomeContent() {
@@ -81,24 +80,31 @@ function WelcomeContent() {
         }
 
         if (email && signupNumber) {
-          // Send confirmation email asynchronously (don't await)
-          sendConfirmationEmail(email, signupNumber, signupNumber) // Using signupNumber as totalSignups fallback
-            .then((result) => {
-              if (result.success) {
-                console.log('Confirmation email sent successfully to:', email)
-                // Analytics tracking is now handled in the email.ts file
-              } else {
-                console.error('Failed to send confirmation email:', result.error)
-                // Silent failure - don't show error to user
-              }
+          // Call the server-side API route instead of direct function
+          const response = await fetch('/api/send-confirmation-email', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              email,
+              signupNumber,
+              totalSignups: signupNumber
             })
-            .catch((error) => {
-              console.error('Error sending confirmation email:', error)
-              // Silent failure - don't block user experience
-            })
+          })
+
+          const result = await response.json()
+
+          if (result.success) {
+            console.log('Confirmation email sent successfully to:', email)
+            // Analytics tracking is handled in the API route
+          } else {
+            console.error('Failed to send confirmation email:', result.error)
+            // Silent failure - don't show error to user
+          }
         }
       } catch (error) {
-        console.error('Error in confirmation email logic:', error)
+        console.error('Error sending confirmation email:', error)
         // Silent failure - don't block user experience
       }
     }
