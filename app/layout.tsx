@@ -3,6 +3,7 @@ import { Inter } from 'next/font/google'
 import './globals.css'
 import OfflineBanner from '@/components/OfflineBanner'
 import { Polish } from '@/components/Polish'
+import WebVitalsTracker from '@/components/WebVitalsTracker'
 
 // Optimize fonts with next/font
 const inter = Inter({
@@ -141,35 +142,11 @@ export default function RootLayout({
             `,
           }}
         />
-        <script
-          dangerouslySetInnerHTML={{
-            __html: `
-              if (typeof window !== 'undefined') {
-                (function() {
-                  // Initialize Web Vitals tracking
-                  import('/lib/vitals').then(({ initWebVitals }) => {
-                    initWebVitals()
-                  }).catch(console.error)
-                  
-                  // Handle unhandled promise rejections
-                  window.addEventListener('unhandledrejection', function(event) {
-                    console.error('[Unhandled Rejection]', event.reason);
-                    event.preventDefault();
-                  });
-                  
-                  // Handle uncaught errors
-                  window.addEventListener('error', function(event) {
-                    console.error('[Uncaught Error]', event.error);
-                  });
-                })();
-              }
-            `,
-          }}
-        />
       </head>
       <body className={`${inter.variable} min-h-screen bg-black text-white antialiased font-sans`}>
         <OfflineBanner />
         <Polish />
+        <WebVitalsTracker />
         {children}
       </body>
     </html>

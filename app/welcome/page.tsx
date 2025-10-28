@@ -28,9 +28,12 @@ function WelcomeContent() {
   useEffect(() => {
     const fetchWelcomeData = async () => {
       try {
-        // Get email from session or localStorage
-        const email = localStorage.getItem('verificationEmail') || 
-                     sessionStorage.getItem('userEmail')
+        // Only access localStorage/sessionStorage on client side
+        let email = null
+        if (typeof window !== 'undefined') {
+          email = localStorage.getItem('verificationEmail') || 
+                  sessionStorage.getItem('userEmail')
+        }
         
         if (email) {
           const response = await fetch(`/api/welcome-data?email=${encodeURIComponent(email)}`)
@@ -43,22 +46,22 @@ function WelcomeContent() {
             // Track welcome view
             trackWelcomeView(data.calculatedNumber)
           } else {
-            // Fallback to default message and random number
+            // Fallback to default message and deterministic number
             setMessage('access: granted. status: active.')
-            const fallbackNumber = 3246 + Math.floor(Math.random() * 1000) + 1
+            const fallbackNumber = 3246 + 500 // Use deterministic number instead of random
             setSignupNumber(fallbackNumber)
           }
         } else {
           // Fallback if no email found
           setMessage('access: granted. status: active.')
-          const fallbackNumber = 3246 + Math.floor(Math.random() * 1000) + 1
+          const fallbackNumber = 3246 + 500 // Use deterministic number instead of random
           setSignupNumber(fallbackNumber)
         }
       } catch (error) {
         console.error('Error fetching welcome data:', error)
-        // Fallback to default message and random number
+        // Fallback to default message and deterministic number
         setMessage('access: granted. status: active.')
-        const fallbackNumber = 3246 + Math.floor(Math.random() * 1000) + 1
+        const fallbackNumber = 3246 + 500 // Use deterministic number instead of random
         setSignupNumber(fallbackNumber)
       }
     }
@@ -70,10 +73,13 @@ function WelcomeContent() {
   useEffect(() => {
     const sendConfirmationEmailAsync = async () => {
       try {
-        // Get email from session or localStorage
-        const email = localStorage.getItem('verificationEmail') || 
-                     sessionStorage.getItem('userEmail')
-        
+        // Only access localStorage/sessionStorage on client side
+        let email = null
+        if (typeof window !== 'undefined') {
+          email = localStorage.getItem('verificationEmail') ||
+                  sessionStorage.getItem('userEmail')
+        }
+
         if (email && signupNumber) {
           // Send confirmation email asynchronously (don't await)
           sendConfirmationEmail(email, signupNumber, signupNumber) // Using signupNumber as totalSignups fallback
