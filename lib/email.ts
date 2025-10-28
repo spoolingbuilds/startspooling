@@ -1,5 +1,6 @@
 import { Resend } from 'resend'
-import { verificationCodeTemplate } from './email-templates'
+import { verificationCodeTemplate, confirmationEmailTemplate, ConfirmationEmailData } from './email-templates'
+import { analytics } from './analytics'
 
 /**
  * Email service configuration
@@ -20,6 +21,53 @@ if (!RESEND_API_KEY || RESEND_API_KEY === 'your_resend_api_key_here' || RESEND_A
 }
 
 const resend = new Resend(RESEND_API_KEY)
+
+/**
+ * Get completion percentage based on project milestones
+ */
+function getCompletionPercentage(): number {
+  const now = new Date()
+  
+  // Project milestones
+  const milestones = [
+    { date: new Date('2025-01-01'), percentage: 0 },    // Project start
+    { date: new Date('2025-02-15'), percentage: 25 },   // Waitlist phase
+    { date: new Date('2025-03-30'), percentage: 50 },    // Beta ready
+    { date: new Date('2025-05-15'), percentage: 75 },   // Feature complete
+    { date: new Date('2025-06-30'), percentage: 100 }   // Public launch
+  ]
+  
+  // Find current milestone
+  for (let i = milestones.length - 1; i >= 0; i--) {
+    if (now >= milestones[i].date) {
+      return milestones[i].percentage
+    }
+  }
+  
+  return 0
+}
+
+/**
+ * Get cryptic status message based on signup number
+ */
+function getCrypticStatus(signupNumber: number): string {
+  const statuses = [
+    'building in progress',
+    'compiling memories',
+    'archive expanding',
+    'data streams flowing',
+    'connections forming',
+    'patterns emerging',
+    'systems awakening',
+    'networks converging',
+    'possibilities unfolding',
+    'future crystallizing'
+  ]
+  
+  // Rotate through statuses based on signup number
+  const index = (signupNumber - 1) % statuses.length
+  return statuses[index]
+}
 
 /**
  * Check if email service is properly configured
@@ -272,6 +320,98 @@ export async function resendVerificationCode(
   ipAddress?: string
 ): Promise<EmailSendResult> {
   return sendVerificationCode(email, code, ipAddress)
+}
+
+/**
+ * Send confirmation email after successful verification
+ * @param email - Recipient email address
+ * @param signupNumber - User's signup number
+ * @param totalSignups - Total number of signups (optional, defaults to signupNumber)
+ * @param ipAddress - IP address for rate limiting (optional)
+ * @returns EmailSendResult
+ */
+export async function sendConfirmationEmail(
+  email: string,
+  signupNumber: number,
+  totalSignups?: number,
+  ipAddress?: string
+): Promise<EmailSendResult> {
+  try {
+    // Rate limiting check
+    if (isEmailRateLimited(email)) {
+      console.warn(`[Email] Rate limited for confirmation email: ${email}`)
+      return {
+        success: false,
+        error: 'Rate limit exceeded. Please try again later.'
+      }
+    }
+
+    if (ipAddress && isIpRateLimited(ipAddress)) {
+      console.warn(`[Email] Rate limited for IP confirmation email: ${ipAddress}`)
+      return {
+        success: false,
+        error: 'Rate limit exceeded. Please try again later.'
+      }
+    }
+
+    // Prepare confirmation email data
+    const now = new Date()
+    const confirmationData: ConfirmationEmailData = {
+      signupNumber,
+      totalSignups: totalSignups || signupNumber,
+      date: now.toLocaleDateString('en-US', { 
+        year: 'numeric', 
+        month: 'short', 
+        day: 'numeric' 
+      }),
+      timestamp: now.toLocaleString('en-US', {
+        year: 'numeric',
+        month: 'short',
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
+        timeZoneName: 'short'
+      }),
+      completionPercentage: getCompletionPercentage(),
+      crypticStatus: getCrypticStatus(signupNumber)
+    }
+
+    // Create email template
+    const template = confirmationEmailTemplate(confirmationData)
+    
+    // Send email with retry logic
+    const result = await sendEmailWithRetry(
+      email,
+      'Archived',
+      template
+    )
+
+    // Record send attempt for rate limiting
+    if (result.success && ipAddress) {
+      recordEmailSend(email, ipAddress)
+    }
+
+    // Track analytics
+    if (result.success) {
+      console.log(`Confirmation email sent to ${email}`)
+      analytics.confirmationEmailSent(signupNumber, email)
+    } else {
+      console.error(`Failed to send confirmation email:`, result.error)
+      analytics.confirmationEmailFailed(signupNumber, email, result.error || 'Unknown error')
+    }
+
+    return result
+  } catch (error) {
+    console.error('[Email] Error in sendConfirmationEmail:', error)
+    
+    // Track analytics for catch block error
+    analytics.confirmationEmailFailed(signupNumber, email, error instanceof Error ? error.message : 'Unknown error')
+    
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Failed to send confirmation email'
+    }
+  }
 }
 
 /**

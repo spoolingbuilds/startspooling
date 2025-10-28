@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback, Suspense } from 'react'
 import { useSearchParams } from 'next/navigation'
 import { analytics, FUNNEL_STEPS } from '@/lib/analytics'
+import { sendConfirmationEmail } from '@/lib/email'
 import PageAnalytics from '@/components/PageAnalytics'
 
 function WelcomeContent() {
@@ -64,6 +65,43 @@ function WelcomeContent() {
 
     fetchWelcomeData()
   }, [trackWelcomeView])
+
+  // Send confirmation email when user data is available
+  useEffect(() => {
+    const sendConfirmationEmailAsync = async () => {
+      try {
+        // Get email from session or localStorage
+        const email = localStorage.getItem('verificationEmail') || 
+                     sessionStorage.getItem('userEmail')
+        
+        if (email && signupNumber) {
+          // Send confirmation email asynchronously (don't await)
+          sendConfirmationEmail(email, signupNumber, signupNumber) // Using signupNumber as totalSignups fallback
+            .then((result) => {
+              if (result.success) {
+                console.log('Confirmation email sent successfully to:', email)
+                // Analytics tracking is now handled in the email.ts file
+              } else {
+                console.error('Failed to send confirmation email:', result.error)
+                // Silent failure - don't show error to user
+              }
+            })
+            .catch((error) => {
+              console.error('Error sending confirmation email:', error)
+              // Silent failure - don't block user experience
+            })
+        }
+      } catch (error) {
+        console.error('Error in confirmation email logic:', error)
+        // Silent failure - don't block user experience
+      }
+    }
+
+    // Only send email if we have both email and signup number
+    if (signupNumber) {
+      sendConfirmationEmailAsync()
+    }
+  }, [signupNumber]) // Depend on signupNumber so it runs when data is available
 
   // Typewriter effect
   useEffect(() => {

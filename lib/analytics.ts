@@ -189,6 +189,31 @@ export const analytics = {
     analytics.track('funnel_step', { step, ...metadata })
   },
 
+  // Email events
+  confirmationEmailSent: (signupNumber: number, email: string) => {
+    analytics.track('confirmation_email_sent', {
+      signup_number: signupNumber,
+      email_hash: hashEmail(email.toLowerCase()),
+      timestamp: Date.now(),
+    })
+  },
+
+  confirmationEmailFailed: (signupNumber: number, email: string, error: string) => {
+    analytics.track('confirmation_email_failed', {
+      signup_number: signupNumber,
+      email_hash: hashEmail(email.toLowerCase()),
+      error_type: error,
+      timestamp: Date.now(),
+    })
+  },
+
+  emailLinkClicked: (source: string) => {
+    analytics.track('email_link_clicked', {
+      email_source: source,
+      timestamp: Date.now(),
+    })
+  },
+
   // Custom events
   custom: (eventName: string, properties?: Record<string, any>) => {
     analytics.track(eventName, properties)
@@ -204,7 +229,8 @@ export const FUNNEL_STEPS = {
   VERIFY_VIEW: 'verify_view',
   CODE_ENTER: 'code_enter',
   VERIFICATION_SUCCESS: 'verification_success',
-  WELCOME_VIEW: 'welcome_view'
+  WELCOME_VIEW: 'welcome_view',
+  CONFIRMATION_EMAIL_SENT: 'confirmation_email_sent'
 } as const
 
 // Hook for tracking time on page

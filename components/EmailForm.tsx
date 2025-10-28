@@ -21,6 +21,17 @@ export default function EmailForm({ className = '' }: EmailFormProps) {
   const { error, isLoading, setError, clearError, handleAsync } = useErrorHandling()
   const router = useRouter()
 
+  // Track email link clicks from confirmation emails
+  useEffect(() => {
+    // Check if user came from confirmation email
+    const urlParams = new URLSearchParams(window.location.search)
+    const utmSource = urlParams.get('utm_source')
+    
+    if (utmSource === 'confirmation_email') {
+      analytics.emailLinkClicked('confirmation_email')
+    }
+  }, [])
+
   // Email validation
   const isValidEmail = (email: string): boolean => {
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
