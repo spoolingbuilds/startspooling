@@ -11,27 +11,32 @@ datasource db {
 }
 
 model WaitlistSignup {
-  id                   String    @id @default(cuid())
-  email                String    @unique
-  verificationCode     String
-  verificationAttempts Int       @default(0)
-  lockedUntil          DateTime?
-  isVerified           Boolean   @default(false)
-  verifiedAt           DateTime?
-  welcomeMessageId     Int?
-  welcomeMessageText   String?
-  calculatedNumber     Int?
-  browserClient        String
-  ipAddress            String
-  spoolTag             String    @default("Spool_PL")
-  referralSource       String?
-  createdAt            DateTime  @default(now())
-  updatedAt            DateTime  @updatedAt
+  id                      String    @id @default(cuid())
+  email                   String    @unique
+  verificationCode        String
+  verificationAttempts    Int       @default(0)
+  lockedUntil             DateTime?
+  isVerified              Boolean   @default(false)
+  verifiedAt              DateTime?
+  welcomeMessageId        Int?
+  welcomeMessageText      String?
+  calculatedNumber        Int?
+  browserClient           String
+  ipAddress               String
+  spoolTag                String    @default("Spool_PL")
+  referralSource          String?
+  reregistrationCount     Int       @default(0) // Track how many times email is re-registered
+  lastVerificationIp      String?   // IP address of last verification
+  lastVerificationTimestamp DateTime? // Timestamp of last verification
+  codeReverificationCount Int       @default(0) // Track how many times same code is verified
+  createdAt               DateTime  @default(now())
+  updatedAt               DateTime  @updatedAt
 
   @@map("waitlist_signups")
   @@index([lockedUntil])
   @@index([email, isVerified]) // Composite index for verification queries
   @@index([ipAddress, createdAt]) // Composite index for rate limiting
+  @@index([lastVerificationIp, lastVerificationTimestamp]) // Index for verification tracking
 }
 
 model VerificationAttempt {

@@ -180,7 +180,9 @@ export async function POST(request: NextRequest) {
         verificationCode: newCode,
         verificationAttempts: 0,
         lockedUntil: null, // Remove any existing lock
-        updatedAt: new Date()
+        updatedAt: new Date(),
+        lastVerificationIp: ipAddress, // Track IP of resend request
+        lastVerificationTimestamp: new Date() // Track timestamp of resend request
       }
     })
 

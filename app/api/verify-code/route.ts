@@ -12,7 +12,9 @@ import {
   checkIfLocked,
   incrementVerificationAttempts,
   lockAccount,
-  logVerificationAttempt
+  logVerificationAttempt,
+  verifyAndUnlock,
+  incrementCodeReverificationCount
 } from '@/lib/db'
 import { setSessionCookie } from '@/lib/session'
 import { sanitizeInput, validateInput, securityLogger, securityRateLimiter } from '@/lib/security'
@@ -214,23 +216,25 @@ export async function POST(request: NextRequest) {
         // Keep default fallback
       }
 
-      // Update with proper error handling
+      // Update with proper error handling using the new verifyAndUnlock function
       try {
+        const verifyResult = await verifyAndUnlock(sanitizedEmail, ipAddress)
+        if (!verifyResult.success) {
+          throw new Error(verifyResult.error)
+        }
+        
+        // Update additional fields that verifyAndUnlock doesn't handle
         await prisma.waitlistSignup.update({
           where: { email: sanitizedEmail },
           data: {
-            isVerified: true,
-            verifiedAt: new Date(),
             welcomeMessageId,
             welcomeMessageText,
-            calculatedNumber,
-            verificationAttempts: 0, // Reset attempts on success
-            lockedUntil: null // Remove any lock
+            calculatedNumber
           }
         })
       } catch (dbError) {
         console.error('[Verify API] Database update error:', dbError)
-        // Try without the new fields if they're causing issues
+        // Fallback to basic verification without tracking
         await prisma.waitlistSignup.update({
           where: { email: sanitizedEmail },
           data: {
@@ -245,6 +249,9 @@ export async function POST(request: NextRequest) {
 
       // Log successful attempt
       await logVerificationAttempt(sanitizedEmail, sanitizedCode, true, ipAddress)
+      
+      // Track code re-verification (increment count for same code being verified again)
+      await incrementCodeReverificationCount(sanitizedEmail)
 
       // Create response with session cookie
       const response = NextResponse.json(

@@ -59,7 +59,11 @@ export async function createSignup(
         verificationCode,
         browserClient,
         ipAddress,
-        referralSource: referralSource || null
+        referralSource: referralSource || null,
+        reregistrationCount: 0, // First registration
+        lastVerificationIp: null, // No verification yet
+        lastVerificationTimestamp: null, // No verification yet
+        codeReverificationCount: 0 // No re-verifications yet
       }
     })
 
@@ -167,9 +171,10 @@ export async function lockAccount(email: string, lockUntilTime: Date): Promise<S
 /**
  * Verifies a signup and unlocks the account
  * @param email - Email address of the signup
+ * @param ipAddress - IP address of the verification attempt
  * @returns Promise<VerificationResult>
  */
-export async function verifyAndUnlock(email: string): Promise<VerificationResult> {
+export async function verifyAndUnlock(email: string, ipAddress?: string): Promise<VerificationResult> {
   try {
     const signup = await prisma.waitlistSignup.update({
       where: { email },
@@ -177,7 +182,9 @@ export async function verifyAndUnlock(email: string): Promise<VerificationResult
         isVerified: true,
         verifiedAt: new Date(),
         lockedUntil: null,
-        verificationAttempts: 0 // Reset attempts on successful verification
+        verificationAttempts: 0, // Reset attempts on successful verification
+        lastVerificationIp: ipAddress || null, // Track IP of verification
+        lastVerificationTimestamp: new Date() // Track timestamp of verification
       }
     })
 
@@ -252,11 +259,18 @@ export async function updateVerificationCode(email: string, newCode: string): Pr
       data: {
         verificationCode: newCode,
         verificationAttempts: 0, // Reset attempts when new code is generated
-        lockedUntil: null // Remove any existing lock
+        lockedUntil: null, // Remove any existing lock
+        reregistrationCount: {
+          increment: 1 // Increment re-registration count
+        }
       }
     })
 
-    console.log('[DB] Update successful:', { email, updatedCode: signup.verificationCode })
+    console.log('[DB] Update successful:', { 
+      email, 
+      updatedCode: signup.verificationCode,
+      reregistrationCount: signup.reregistrationCount 
+    })
 
     return {
       success: true,
@@ -457,6 +471,35 @@ export async function cleanupExpiredData(daysToKeep: number = 30): Promise<Signu
     return {
       success: false,
       error: 'Failed to cleanup expired data'
+    }
+  }
+}
+
+/**
+ * Increments the code re-verification count for a signup
+ * @param email - Email address of the signup
+ * @returns Promise<SignupResult>
+ */
+export async function incrementCodeReverificationCount(email: string): Promise<SignupResult> {
+  try {
+    const signup = await prisma.waitlistSignup.update({
+      where: { email },
+      data: {
+        codeReverificationCount: {
+          increment: 1
+        }
+      }
+    })
+
+    return {
+      success: true,
+      data: signup
+    }
+  } catch (error) {
+    console.error('Error incrementing code re-verification count:', error)
+    return {
+      success: false,
+      error: 'Failed to increment code re-verification count'
     }
   }
 }
