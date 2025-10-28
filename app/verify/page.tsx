@@ -129,9 +129,9 @@ export default function VerifyPage() {
     if (!email || !email.includes('@')) return email
     const [name, domain] = email.split('@')
     if (name.length <= 2) {
-      return `${name[0]}****@starts*******.com`
+      return `${name[0]}****@${domain.substring(0, 2)}*******.${domain.split('.').pop()}`
     }
-    return `te****@starts*******.com`
+    return `${name.substring(0, 2)}****@${domain.substring(0, 2)}*******.${domain.split('.').pop()}`
   }
 
   // Validate character input
