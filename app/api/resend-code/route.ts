@@ -134,13 +134,14 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Check if already verified
-    if (signup.isVerified) {
-      return NextResponse.json(
-        { success: false, message: 'already verified' },
-        { status: 400 }
-      )
-    }
+    // Allow resending to already verified users (for consistency with waitlist API)
+    // The waitlist API sends codes to already verified users, so resend should too
+    // if (signup.isVerified) {
+    //   return NextResponse.json(
+    //     { success: false, message: 'already verified' },
+    //     { status: 400 }
+    //   )
+    // }
 
     // Check if account is locked
     if (signup.lockedUntil && signup.lockedUntil > new Date()) {
