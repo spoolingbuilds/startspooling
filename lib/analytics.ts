@@ -127,30 +127,24 @@ export const analytics = {
       console.log('[Analytics]', event, eventData.properties)
     }
     
-    // In production: send to analytics service
-    // Example implementations:
-    
-    // For GA4:
-    // if (typeof window !== 'undefined' && window.gtag) {
-    //   window.gtag('event', event, eventData.properties)
-    // }
-    
-    // For Plausible:
-    // if (typeof window !== 'undefined' && window.plausible) {
-    //   window.plausible(event, { props: eventData.properties })
-    // }
-    
-    // For custom backend:
-    // fetch('/api/analytics', {
-    //   method: 'POST',
-    //   headers: { 'Content-Type': 'application/json' },
-    //   body: JSON.stringify(eventData)
-    // }).catch(console.error)
-    
-    // For now, just log in development
-    if (process.env.NODE_ENV === 'development') {
-      // Could also send to a test endpoint
-      // fetch('/api/analytics-test', { method: 'POST', body: JSON.stringify(eventData) })
+    // Send to analytics service
+    if (process.env.NODE_ENV === 'production') {
+      // Google Analytics 4
+      if (typeof window !== 'undefined' && (window as any).gtag) {
+        (window as any).gtag('event', event, eventData.properties)
+      }
+      
+      // Custom backend fallback
+      fetch('/api/analytics', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(eventData)
+      }).catch(console.error)
+    } else {
+      // Development: also send to GA4 for testing
+      if (typeof window !== 'undefined' && (window as any).gtag) {
+        (window as any).gtag('event', event, eventData.properties)
+      }
     }
   },
 

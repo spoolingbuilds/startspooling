@@ -25,34 +25,38 @@ export function reportWebVitals(metric: Metric) {
 
   // Send to analytics in production
   if (process.env.NODE_ENV === 'production') {
-    // TODO: Send to your analytics service
-    // Examples:
-    // - Google Analytics 4
-    // - Vercel Analytics
-    // - Custom analytics endpoint
-    
-    // Example with Google Analytics 4:
-    // if (typeof window !== 'undefined' && (window as any).gtag) {
-    //   (window as any).gtag('event', name, {
-    //     value: Math.round(name === 'CLS' ? value * 1000 : value),
-    //     event_category: 'Web Vitals',
-    //     event_label: id,
-    //     non_interaction: true,
-    //   })
-    // }
+    // Google Analytics 4
+    if (typeof window !== 'undefined' && (window as any).gtag) {
+      (window as any).gtag('event', name, {
+        value: Math.round(name === 'CLS' ? value * 1000 : value),
+        event_category: 'Web Vitals',
+        event_label: id,
+        non_interaction: true,
+      })
+    }
 
-    // Example with custom endpoint:
-    // fetch('/api/vitals', {
-    //   method: 'POST',
-    //   headers: { 'Content-Type': 'application/json' },
-    //   body: JSON.stringify({
-    //     name,
-    //     value,
-    //     rating,
-    //     delta,
-    //     url: window.location.href,
-    //   }),
-    // })
+    // Custom endpoint
+    fetch('/api/vitals', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        name,
+        value,
+        rating,
+        delta,
+        url: window.location.href,
+      }),
+    }).catch(console.error)
+  } else {
+    // Development: also send to GA4 for testing
+    if (typeof window !== 'undefined' && (window as any).gtag) {
+      (window as any).gtag('event', name, {
+        value: Math.round(name === 'CLS' ? value * 1000 : value),
+        event_category: 'Web Vitals',
+        event_label: id,
+        non_interaction: true,
+      })
+    }
   }
 }
 

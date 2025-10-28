@@ -83,6 +83,19 @@ export default function RootLayout({
   return (
     <html lang="en" className="dark">
       <head>
+        {/* Google tag (gtag.js) */}
+        <script async src="https://www.googletagmanager.com/gtag/js?id=G-Q4DPF21RBC"></script>
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `
+              window.dataLayer = window.dataLayer || [];
+              function gtag(){dataLayer.push(arguments);}
+              gtag('js', new Date());
+              gtag('config', 'G-Q4DPF21RBC');
+            `,
+          }}
+        />
+        
         {/* ASCII Art Easter Egg for Homepage */}
         <script
           dangerouslySetInnerHTML={{
@@ -123,6 +136,11 @@ export default function RootLayout({
             __html: `
               if (typeof window !== 'undefined') {
                 (function() {
+                  // Initialize Web Vitals tracking
+                  import('/lib/vitals').then(({ initWebVitals }) => {
+                    initWebVitals()
+                  }).catch(console.error)
+                  
                   // Handle unhandled promise rejections
                   window.addEventListener('unhandledrejection', function(event) {
                     console.error('[Unhandled Rejection]', event.reason);
