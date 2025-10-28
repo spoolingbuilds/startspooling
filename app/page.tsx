@@ -87,73 +87,113 @@ export default function HomePage() {
       />
       <div className="min-h-screen bg-background text-text-primary">
         {/* Hero Section - Full Viewport Height */}
-        <main className="min-h-screen flex flex-col items-center justify-center px-4">
-        <div className="max-w-2xl mx-auto text-center space-y-8">
-          {/* SpoolAnimation */}
-          <div className="mb-8">
-            <SpoolAnimation />
+        <main className="min-h-screen flex flex-col items-center justify-center px-4" role="main">
+          <section 
+            className="max-w-2xl mx-auto text-center space-y-8"
+            aria-label="Hero section"
+          >
+            {/* SpoolAnimation */}
+            <div className="mb-8" aria-hidden="true">
+              <SpoolAnimation />
+            </div>
+            
+            {/* Headline */}
+            <h1 className="text-[2rem] sm:text-[2.5rem] lg:text-[3.5rem] font-bold leading-[1.2] text-white text-center lowercase">
+              photobucket deleted it.<br />
+              forums lost it.<br />
+              instagram buried it.
+            </h1>
+            
+            {/* Subheadline */}
+            <p className="text-lg sm:text-xl lg:text-2xl font-medium text-white text-center lowercase mt-4" style={{ textShadow: '0 0 10px #00ffff' }}>
+              we didn't.
+            </p>
+            
+            {/* Email Form */}
+            <div className="pt-4" role="region" aria-label="Email signup">
+              <EmailForm />
+              <StatsCounter />
+            </div>
+          </section>
+        </main>
+
+        {/* Below Fold - Cryptic Messages */}
+        <section 
+          className="py-16 px-4"
+          aria-label="Documentation problems we solve"
+        >
+          <h2 className="sr-only">Why Build Documentation Fails</h2>
+          <div className="max-w-2xl mx-auto text-center space-y-8">
+            <ScrollAnimatedSection delay={0}>
+              <article className="mb-4">
+                <hr className="border-gray-600 mb-4" />
+                <p className="text-[0.9rem] text-[#666666]">
+                  followed that build for 4 years<br />
+                  can't find it now
+                </p>
+              </article>
+            </ScrollAnimatedSection>
+            
+            <ScrollAnimatedSection delay={300}>
+              <article className="mb-4">
+                <hr className="border-gray-600 mb-4" />
+                <p className="text-[0.9rem] text-[#666666]">
+                  forum thread: 847 pages<br />
+                  search: broken
+                </p>
+              </article>
+            </ScrollAnimatedSection>
+            
+            <ScrollAnimatedSection delay={600}>
+              <article className="mb-4">
+                <hr className="border-gray-600 mb-4" />
+                <p className="text-[0.9rem] text-[#666666]">
+                  instagram post from last week<br />
+                  already buried
+                </p>
+              </article>
+            </ScrollAnimatedSection>
+            
+            <ScrollAnimatedSection delay={900}>
+              <article className="mb-4">
+                <hr className="border-gray-600 mb-4" />
+                <p className="text-[0.9rem] text-[#666666]">
+                  your wastegate is open.<br />
+                  want to close it?
+                </p>
+              </article>
+            </ScrollAnimatedSection>
+            
+            <ScrollAnimatedSection delay={1200}>
+              <hr className="border-gray-600" />
+            </ScrollAnimatedSection>
           </div>
-          
-          {/* Headline */}
-          <h1 className="text-[2rem] sm:text-[2.5rem] lg:text-[3.5rem] font-bold leading-[1.2] text-white text-center lowercase">
-            photobucket deleted it.<br />
-            forums lost it.<br />
-            instagram buried it.
-          </h1>
-          
-          {/* Subheadline */}
-          <p className="text-lg sm:text-xl lg:text-2xl font-medium text-white text-center lowercase mt-4" style={{ textShadow: '0 0 10px #00ffff' }}>
-            we didn't.
+        </section>
+
+        {/* SEO content - hidden from users, visible to search engines */}
+        <div className="sr-only">
+          <h2>Car Build Documentation Platform</h2>
+          <p>
+            StartSpooling helps automotive enthusiasts document project cars, 
+            track modifications, and organize build progress. Never lose another 
+            build thread to deleted forums or Photobucket shutdowns.
           </p>
           
-          {/* Email Form */}
-          <div className="pt-4">
-            <EmailForm />
-            <StatsCounter />
-          </div>
+          <h3>Features for Car Enthusiasts</h3>
+          <ul>
+            <li>Build thread documentation and backup</li>
+            <li>Parts tracking with costs and part numbers</li>
+            <li>Photo organization and galleries</li>
+            <li>Modification timeline and history</li>
+            <li>Search builds by make, model, and mods</li>
+          </ul>
+          
+          <h3>Perfect For</h3>
+          <p>
+            Miata builds, E36 projects, 240SX builds, Civic builds, STI projects, 
+            S2000 builds, and any performance car modification documentation.
+          </p>
         </div>
-      </main>
-
-      {/* Below Fold - Cryptic Messages */}
-      <section className="py-16 px-4">
-        <div className="max-w-2xl mx-auto text-center space-y-8">
-          <ScrollAnimatedSection delay={0}>
-            <hr className="border-gray-600 mb-4" />
-            <p className="text-[0.9rem] text-[#666666]">
-              followed that build for 4 years<br />
-              can't find it now
-            </p>
-          </ScrollAnimatedSection>
-          
-          <ScrollAnimatedSection delay={300}>
-            <hr className="border-gray-600 mb-4" />
-            <p className="text-[0.9rem] text-[#666666]">
-              forum thread: 847 pages<br />
-              search: broken
-            </p>
-          </ScrollAnimatedSection>
-          
-          <ScrollAnimatedSection delay={600}>
-            <hr className="border-gray-600 mb-4" />
-            <p className="text-[0.9rem] text-[#666666]">
-              instagram post from last week<br />
-              already buried
-            </p>
-          </ScrollAnimatedSection>
-          
-          <ScrollAnimatedSection delay={900}>
-            <hr className="border-gray-600 mb-4" />
-            <p className="text-[0.9rem] text-[#666666]">
-              your wastegate is open.<br />
-              want to close it?
-            </p>
-          </ScrollAnimatedSection>
-          
-          <ScrollAnimatedSection delay={1200}>
-            <hr className="border-gray-600" />
-          </ScrollAnimatedSection>
-        </div>
-      </section>
       </div>
     </>
   )

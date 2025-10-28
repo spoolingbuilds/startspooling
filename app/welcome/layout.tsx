@@ -1,8 +1,8 @@
 import type { Metadata } from 'next'
 
 export const metadata: Metadata = {
-  title: 'Verify Email',
-  description: 'Enter your verification code to complete signup',
+  title: 'Welcome',
+  description: 'Welcome to StartSpooling',
   robots: {
     index: false,
     follow: false,
@@ -14,7 +14,7 @@ export const metadata: Metadata = {
   },
 }
 
-export default function VerifyLayout({
+export default function WelcomeLayout({
   children,
 }: {
   children: React.ReactNode
