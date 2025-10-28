@@ -9,18 +9,21 @@ const RESEND_API_KEY = process.env.RESEND_API_KEY
 const FROM_EMAIL = process.env.FROM_EMAIL || 'noreply@startspooling.com'
 const FROM_NAME = 'StartSpooling'
 
-// Log current email configuration for debugging
-console.log('[Email Config] FROM_EMAIL:', FROM_EMAIL)
-console.log('[Email Config] RESEND_API_KEY configured:', !!RESEND_API_KEY)
+// Log current email configuration for debugging (server-side only)
+if (typeof window === 'undefined') {
+  console.log('[Email Config] FROM_EMAIL:', FROM_EMAIL)
+  console.log('[Email Config] RESEND_API_KEY configured:', !!RESEND_API_KEY)
+}
 
-// Validate API key configuration
-if (!RESEND_API_KEY || RESEND_API_KEY === 'your_resend_api_key_here' || RESEND_API_KEY === '') {
+// Validate API key configuration (server-side only)
+if (typeof window === 'undefined' && (!RESEND_API_KEY || RESEND_API_KEY === 'your_resend_api_key_here' || RESEND_API_KEY === '')) {
   console.error('[Email] ⚠️  WARNING: RESEND_API_KEY is not configured!')
   console.error('[Email] Please set RESEND_API_KEY in your .env.local file')
   console.error('[Email] Get your API key from https://resend.com/api-keys')
 }
 
-const resend = new Resend(RESEND_API_KEY)
+// Initialize Resend only on server side with valid API key
+const resend = typeof window === 'undefined' && RESEND_API_KEY ? new Resend(RESEND_API_KEY) : null
 
 /**
  * Get completion percentage based on project milestones
@@ -73,9 +76,11 @@ function getCrypticStatus(signupNumber: number): string {
  * Check if email service is properly configured
  */
 export function isEmailConfigured(): boolean {
-  return !!RESEND_API_KEY && 
+  return typeof window === 'undefined' && 
+         !!RESEND_API_KEY && 
          RESEND_API_KEY !== 'your_resend_api_key_here' && 
-         RESEND_API_KEY !== ''
+         RESEND_API_KEY !== '' &&
+         resend !== null
 }
 
 /**
@@ -206,6 +211,10 @@ async function sendEmailWithRetry(
   
   for (let attempt = 0; attempt <= maxRetries; attempt++) {
     try {
+      if (!resend) {
+        throw new Error('Resend client not initialized')
+      }
+      
       const result = await resend.emails.send({
         from: `${FROM_NAME} <${FROM_EMAIL}>`,
         to,
